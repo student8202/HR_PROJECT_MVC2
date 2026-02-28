@@ -5,7 +5,7 @@
     "lbl_dept": "Department",
     "btn_add": "Add New",
     "btn_save": "Save Changes",
-     "btn_edit": "Update",
+    "btn_edit": "Update",
     "btn_delete": "Delete",
     "btn_add_emp": "Add Employee",
     "confirm_del": "Delete employee {name}?",
@@ -19,6 +19,15 @@
     "btn_yes": "Yes, delete it!",
     "btn_cancel": "Cancel",
     "placeholder_dept": "-- Select Department --",
-    "col_action":"Operation",
-    "err_dept_exists": "This department name already exists!"
+    "col_action": "Operation",
+    "err_dept_exists": "This department name already exists!",
+    "buttons": {
+        "download_template": "Download Template",
+        "export_excel": "Export Excel",
+        "import_excel": "Import Data"
+    },
+    "messages": {
+        "import_success": "Successfully imported {count} employees.",
+        "import_error": "Error importing data!"
+    }
 }

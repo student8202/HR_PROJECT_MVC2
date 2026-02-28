@@ -68,3 +68,66 @@ function saveEmp() {
         }
     });
 }
+// -----------------------
+// --- HÀM TẢI FILE MẪU (TEMPLATE) ---
+function downloadEmpTemplate() {
+    // Chuyển hướng trực tiếp để trình duyệt tự tải file về
+    window.location.href = '/api/employees/template';
+}
+
+// --- HÀM XUẤT EXCEL (EXPORT) ---
+function exportEmpExcel() {
+    Swal.fire({
+        title: 'Đang chuẩn bị dữ liệu...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    // Tải file về
+    window.location.href = '/api/employees/export';
+    
+    // Đóng loading sau 1 giây
+    setTimeout(() => { Swal.close(); }, 1500);
+}
+
+// --- HÀM NHẬP EXCEL (IMPORT) ---
+function handleImportEmp(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Kiểm tra định dạng file nhanh ở client
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext !== 'xlsx' && ext !== 'xls') {
+        Swal.fire('Lỗi', 'Vui lòng chọn file Excel (.xlsx hoặc .xls)', 'error');
+        input.value = '';
+        return;
+    }
+
+    Swal.fire({
+        title: 'Đang xử lý dữ liệu...',
+        text: 'Vui lòng chờ trong giây lát',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    $.ajax({
+        url: '/api/employees/import',
+        type: 'POST',
+        data: formData,
+        processData: false, // Quan trọng: không xử lý dữ liệu
+        contentType: false, // Quan trọng: không set contentType mặc định
+        success: function (response) {
+            input.value = ''; // Reset input để có thể chọn lại file cũ nếu muốn
+            empTable.ajax.reload(); // Load lại DataTables
+            Swal.fire('Thành công!', response.message, 'success');
+        },
+        error: function (xhr) {
+            input.value = '';
+            const msg = xhr.responseJSON ? xhr.responseJSON.error : 'Lỗi kết nối server';
+            Swal.fire('Thất bại', msg, 'error');
+        }
+    });
+}

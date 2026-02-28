@@ -6,5 +6,6 @@ echo [%ts%] Dang kiem tra va khoi dong lai...
 cd /d "C:\SMILE PMS\HR_PROJECT_MVC2"
 "C:\Program Files\Python312\python.exe" -m pip install flask waitress --user
 "C:\Program Files\Python312\python.exe" -m pip install pyodbc --user
+"C:\Program Files\Python312\python.exe" -m pip install pandas openpyxl --user
 "C:\Program Files\Python312\python.exe" app.py
 pause

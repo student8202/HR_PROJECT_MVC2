@@ -7,7 +7,7 @@
     "btn_save": "Lưu dữ liệu",
     "btn_edit": "Sửa",
     "btn_delete": "Xóa",
-    "btn_add_emp":"Thên nhân viên",
+    "btn_add_emp": "Thên nhân viên",
     "confirm_del": "Xóa nhân viên {name}?",
     "msg_success": "Thành công!",
     "msg_err_dept": "Bộ phận này vẫn còn nhân viên, không thể xóa!",
@@ -19,6 +19,15 @@
     "btn_yes": "Đồng ý",
     "btn_cancel": "Hủy bỏ",
     "placeholder_dept": "-- Chọn bộ phận --",
-    "col_action":"Thao tác",
-    "err_dept_exists": "Tên bộ phận này đã tồn tại trong hệ thống!"
+    "col_action": "Thao tác",
+    "err_dept_exists": "Tên bộ phận này đã tồn tại trong hệ thống!",
+    "buttons": {
+        "download_template": "Tải file mẫu",
+        "export_excel": "Xuất Excel",
+        "import_excel": "Nhập dữ liệu"
+    },
+    "messages": {
+        "import_success": "Đã nhập thành công {count} nhân viên.",
+        "import_error": "Lỗi khi nhập dữ liệu!"
+    }
 }

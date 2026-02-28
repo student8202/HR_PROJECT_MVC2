@@ -18,7 +18,7 @@ async function loadLanguage(lang) {
         currentLang = lang;
         applyLanguage(); // Dịch Label HTML
         if (typeof reloadDataTableLanguage === 'function') {
-            reloadDataTableLanguage(); 
+            reloadDataTableLanguage();
         } else {
             console.warn("Hàm reloadDataTableLanguage chưa sẵn sàng.");
         }
@@ -26,23 +26,33 @@ async function loadLanguage(lang) {
         console.error("Lỗi tải ngôn ngữ:", error);
     }
 }
-
-// Hàm lấy text theo key
+/*
+Hàm applyLanguage của bạn chỉ là "người đi phát kẹo", còn hàm t(key) mới là "người lấy kẹo từ trong túi ra". 
+Nếu trong túi (JSON) kẹo được chia vào các ngăn nhỏ (buttons, messages), hàm t cũ sẽ không biết đường tìm.
+*/
+// Hàm lấy text theo key (và cả Hỗ trợ key dạng 'buttons.save')
 function t(key, params = {}) {
-    let text = translations[key] || key;
+    // Tách key bằng dấu chấm và duyệt sâu vào object translations
+    let text = key.split('.').reduce((obj, i) => (obj ? obj[i] : null), translations);
+
+    // Nếu không tìm thấy key, trả về chính cái key đó
+    if (!text) text = key;
+
+    // Thay thế tham số {count}, {name}...
     Object.keys(params).forEach(p => {
-        text = text.replace(`{${p}}`, params[p]);
+        text = text.replace(new RegExp(`{${p}}`, 'g'), params[p]);
     });
+
     return text;
 }
 
 // Hàm quét và dịch các thẻ HTML
 function applyLanguage() {
-    $('[data-i18n]').each(function() {
+    $('[data-i18n]').each(function () {
         const key = $(this).data('i18n');
         $(this).html(t(key));
     });
-    $('[data-i18n-placeholder]').each(function() {
+    $('[data-i18n-placeholder]').each(function () {
         const key = $(this).data('i18n-placeholder');
         $(this).attr('placeholder', t(key));
     });
