@@ -1,0 +1,528 @@
+Chào bạn, đây là bản tổng hợp toàn diện từ đầu đến cuối. Source code này đã tích hợp đầy đủ: MVC Architecture, SQL Server (pyodbc), Bootstrap 5, DataTables (Tiếng Việt), SweetAlert2 (CRUD Ajax), và Live Search.
+1. Cấu trúc thư mục (Chuẩn MVC)
+MVC
+HR_PROJECT/
+├── app.py              # Cấu hình Flask & Register Blueprints
+├── database.py         # Kết nối SQL Server
+├── controllers/
+│   └── employee_ctl.py # Xử lý Logic & Gọi SQL
+│   └── department_ctl.py # Xử lý Logic & Gọi SQL
+├── views/
+│   └── employee_view.py# Định nghĩa Routes (API & Giao diện)
+│   └── department_view.py# Định nghĩa Routes (API & Giao diện)
+└── templates/
+    └── index.html      # Giao diện duy nhất (Bootstrap + JS)
+    └── employee.html
+    └── department.html
+├── static/
+│   └── js/
+│       └── main.js 
+Hãy thận trọng khi sử dụng mã.
+Format Visual Shift + Alt + F
+2. Chi tiết Mã nguồn
+📂 database.py
+import pyodbc
+
+def get_db_connection():
+    conn_str = (
+        'DRIVER={ODBC Driver 17 for SQL Server};'
+        'SERVER=localhost;DATABASE=SMILE_HR;UID=smile;PWD=AnhMinh167TruongDinh;'
+    )
+    return pyodbc.connect(conn_str)
+Hãy thận trọng khi sử dụng mã.
+
+📂 controllers/employee_ctl.py
+python
+from database import get_db_connection
+
+class EmployeeController:
+    @staticmethod
+    def get_all():
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT E.ID, E.FullName, D.DeptName, E.IdDepartment 
+                FROM Employees E LEFT JOIN Departments D ON E.IdDepartment = D.DeptID
+            """)
+            return [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+
+    @staticmethod
+    def save(data):
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            if data.get('ID'):
+                cursor.execute("UPDATE Employees SET FullName=?, IdDepartment=? WHERE ID=?", 
+                               (data['FullName'], data['IdDepartment'], data['ID']))
+            else:
+                cursor.execute("INSERT INTO Employees (FullName, IdDepartment) VALUES (?, ?)", 
+                               (data['FullName'], data['IdDepartment']))
+            conn.commit()
+
+    @staticmethod
+    def delete(id):
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM Employees WHERE ID=?", (id,))
+            conn.commit()
+Hãy thận trọng khi sử dụng mã.
+
+📂 views/employee_view.py
+python
+from flask import Blueprint, jsonify, request
+from controllers.employee_ctl import EmployeeController
+
+employee_bp = Blueprint('employee', __name__)
+
+@employee_bp.route('/api/employees', methods=['GET'])
+def get_emps(): return jsonify(EmployeeController.get_all())
+
+@employee_bp.route('/api/employees/save', methods=['POST'])
+def save_emp():
+    EmployeeController.save(request.json)
+    return jsonify({"status": "success"})
+
+@employee_bp.route('/api/employees/delete/<int:id>', methods=['DELETE'])
+def del_emp(id):
+    EmployeeController.delete(id)
+    return jsonify({"status": "success"})
+Hãy thận trọng khi sử dụng mã.
+-----------------------------------------------------------------------------
+📂 controllers/department_ctl.py
+python
+from database import get_db_connection
+
+class DepartmentController:
+    @staticmethod
+    def get_all():
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM Departments")
+            return [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+
+    @staticmethod
+    def save(data):
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            if data.get('DeptID'):
+                cursor.execute("UPDATE Departments SET DeptName=? WHERE DeptID=?", (data['DeptName'], data['DeptID']))
+            else:
+                cursor.execute("INSERT INTO Departments (DeptName) VALUES (?)", (data['DeptName'],))
+            conn.commit()
+
+    @staticmethod
+    def delete(dept_id):
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # BƯỚC 1: Kiểm tra xem có nhân viên nào thuộc bộ phận này không
+            cursor.execute("SELECT COUNT(*) FROM Employees WHERE IdDepartment = ?", (dept_id,))
+            count = cursor.fetchone()[0]
+            
+            if count > 0:
+                # Trả về False hoặc báo lỗi nếu còn nhân viên
+                return False, f"Không thể xóa! Đang có {count} nhân viên thuộc bộ phận này."
+            
+            # BƯỚC 2: Nếu không có nhân viên, tiến hành xóa
+            cursor.execute("DELETE FROM Departments WHERE DeptID = ?", (dept_id,))
+            conn.commit()
+            return True, "Xóa bộ phận thành công."
+Hãy thận trọng khi sử dụng mã.
+
+📂 views/department_view.py
+python
+from flask import Blueprint, jsonify, request
+from controllers.department_ctl import DepartmentController
+
+department_bp = Blueprint('department', __name__)
+
+@department_bp.route('/api/departments', methods=['GET'])
+def get_depts(): return jsonify(DepartmentController.get_all())
+
+@department_bp.route('/api/departments/save', methods=['POST'])
+def save_dept():
+    DepartmentController.save(request.json)
+    return jsonify({"status": "success"})
+
+@department_bp.route('/api/departments/delete/<int:id>', methods=['DELETE'])
+def del_dept(id):
+    success, message = DepartmentController.delete(id)
+    if success:
+        return jsonify({"status": "success", "message": message}), 200
+    else:
+        # Trả về lỗi 400 kèm tin nhắn cảnh báo
+        return jsonify({"status": "error", "message": message}), 400
+Hãy thận trọng khi sử dụng mã.
+-----------------------------------------------------------------------------
+📂 templates/index.html
+html
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Manager Pro</title>
+    <!-- 1. Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 2. DataTables CSS cho Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <!-- 3. DataTables Buttons CSS (Xuất file) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.3/css/buttons.dataTables.min.css">
+    <!-- Include Select2 CSS from jsDelivr -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+</head>
+<body class="bg-light">
+<div class="container mt-4 card shadow p-0">
+        <ul class="nav nav-tabs bg-white">
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#emp-tab">Nhân viên</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#dept-tab">Bộ phận</a></li>
+        </ul>
+        <div class="tab-content">
+            <div id="emp-tab" class="tab-pane fade show active">{% include 'employee.html' %}</div>
+            <div id="dept-tab" class="tab-pane fade">{% include 'department.html' %}</div>
+        </div>
+    </div>
+
+<!-- Scripts: JQuery, Bootstrap, DataTables, SWAL2 -->
+<!-- 1. jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<!-- 2. Bootstrap 5 Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- 3. DataTables Core & Bootstrap 5 -->
+<!-- DataTables Core JS -->
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<!-- DataTables Bootstrap 5 JS -->
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<!-- 4. DataTables Buttons & Xuất File (Excel/PDF/Print) -->
+<!-- Buttons Extension -->
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+<!-- Thư viện hỗ trợ xuất file -->
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+<!-- 5. SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Include Select2 JS from jsDelivr -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- LOAD FILE JS RIÊNG -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<!-- Nhúng Bootstrap Bundle JS (bao gồm Popper) trước thẻ </body> -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+Hãy thận trọng khi sử dụng mã.
+📂 templates/employee.html
+html
+<div class="p-3">
+    <button class="btn btn-primary mb-3" onclick="openEmpModal()">+ Thêm nhân viên</button>
+    <table id="empTable" class="table table-striped table-bordered w-100">
+        <thead>
+            <tr><th>ID</th><th>Họ Tên</th><th>Bộ Phận</th><th>Thao tác</th></tr>
+        </thead>
+    </table>
+</div>
+
+<div class="modal fade" id="empModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>Nhân viên</h5></div>
+            <div class="modal-body">
+                <input type="hidden" id="empId">
+                <input type="text" id="empName" class="form-control mb-2" placeholder="Họ tên">
+                <div class="mb-3">
+                    <label class="form-label">Chọn Bộ phận</label>
+                    <select id="empDeptSelect" class="form-control select2-searchable">
+                        <option value="">Đang tải dữ liệu...</option>
+                    </select>
+                </div>
+                <!-- <select id="empDeptSelect" class="form-select select2-enable"></select> -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="saveEmp()">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+📂 templates/department.html
+html
+<div class="p-3">
+    <button class="btn btn-success mb-3" onclick="openDeptModal()">+ Thêm bộ phận</button>
+    <table id="deptTable" class="table table-striped table-bordered w-100">
+        <thead>
+            <tr><th>ID</th><th>Tên bộ phận</th><th>Thao tác</th></tr>
+        </thead>
+    </table>
+</div>
+
+<div class="modal fade" id="deptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>Bộ phận</h5></div>
+            <div class="modal-body">
+                <input type="hidden" id="deptId">
+                <input type="text" id="deptName" class="form-control" placeholder="Tên bộ phận">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="saveDept()">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+📂 static/js/main.js
+let empTable, deptTable;
+
+$(document).ready(function () {
+    // Init Tables
+    const dtConfig = {
+        dom: 'Bfrtip',
+        buttons: ['copy', 'excel', 'pdf', 'print']
+    };
+
+    empTable = $('#empTable').DataTable({
+        ...dtConfig,
+        ajax: { url: '/api/employees', dataSrc: '' },
+        columns: [
+            { data: 'ID' },
+            { data: 'FullName' },
+            { data: 'DeptName' },
+            {
+                data: 'ID',
+                render: function (data, type, row) {
+                    return `
+                                <button class="btn btn-sm btn-warning" onclick='editEmp(${JSON.stringify(row)})'>Sửa</button>
+                                <button class="btn btn-sm btn-danger" onclick='delEmp(${JSON.stringify(row)})'>Xóa</button>
+                            `;
+                }
+            }
+        ]
+    });
+
+    deptTable = $('#deptTable').DataTable({
+        ...dtConfig,
+        ajax: { url: '/api/departments', dataSrc: '' },
+        columns: [
+            { data: 'DeptID' },
+            { data: 'DeptName' },
+            {
+                data: 'DeptID',
+                render: function (data, type, row) {
+                    return `
+                                <button class="btn btn-sm btn-warning" onclick='editDept(${JSON.stringify(row)})'>Sửa</button>
+                                <button class="btn btn-sm btn-danger" onclick='delDept(${JSON.stringify(row)})'>Xóa</button>
+                            `;
+                }
+            }
+        ]
+    });
+
+    loadDeptsToDropdown();
+});
+
+function loadDeptsToDropdown() {
+    $.ajax({
+        url: '/api/departments',
+        type: 'GET',
+        success: function (data) {
+            let html = '<option value="">-- Tìm và chọn bộ phận --</option>';
+            data.forEach(d => {
+                html += `<option value="${d.DeptID}">${d.DeptName}</option>`;
+            });
+
+            // Đổ dữ liệu vào select
+            const $select = $('#empDeptSelect');
+            $select.html(html);
+
+            // Khởi tạo Select2 với tính năng tìm kiếm
+            $select.select2({
+                theme: 'bootstrap-5', // Nếu bạn dùng bản Select2 bootstrap theme
+                placeholder: 'Gõ để tìm bộ phận...',
+                allowClear: true,
+                width: '100%',
+                // QUAN TRỌNG: Cần dòng này để search được khi nằm trong Bootstrap Modal
+                dropdownParent: $('#empModal')
+            });
+        },
+        error: function () {
+            Swal.fire('Lỗi', 'Không thể tải danh sách bộ phận', 'error');
+        }
+    });
+}
+
+// Functions for Employee
+function openEmpModal() { $('#empId').val(''); $('#empModal').modal('show'); }
+function saveEmp() {
+    $.ajax({
+        url: '/api/employees/save', type: 'POST', contentType: 'application/json',
+        data: JSON.stringify({ FullName: $('#empName').val(), IdDepartment: $('#empDeptSelect').val() }),
+        success: () => { $('#empModal').modal('hide'); empTable.ajax.reload(); Swal.fire('Xong!', '', 'success'); }
+    });
+}
+function delEmp(id) {
+    if (confirm('Xóa?')) $.ajax({ url: `/api/employees/delete/${id}`, type: 'DELETE', success: () => empTable.ajax.reload() });
+}
+function delEmp(row) {
+    Swal.fire({
+        title: 'Xác nhận xóa?',
+        html: `Bạn có chắc chắn muốn xóa nhân viên <br><b>${row.FullName}</b> (ID: ${row.ID}) không?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Vâng, xóa ngay!',
+        cancelButtonText: 'Hủy',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `/api/employees/delete/${row.ID}`,
+                type: 'DELETE',
+                success: function () {
+                    empTable.ajax.reload();
+                    Swal.fire('Đã xóa!', `Nhân viên <b>${row.FullName}</b> đã bị xóa.`, 'success');
+                },
+                error: () => Swal.fire('Lỗi', 'Không thể xóa dữ liệu', 'error')
+            });
+        }
+    });
+}
+// Functions for Department
+function openDeptModal() { $('#deptId').val(''); $('#deptModal').modal('show'); }
+function saveDept() {
+    $.ajax({
+        url: '/api/departments/save', type: 'POST', contentType: 'application/json',
+        data: JSON.stringify({ DeptName: $('#deptName').val() }),
+        success: () => { $('#deptModal').modal('hide'); deptTable.ajax.reload(); loadDeptsToDropdown(); }
+    });
+}
+function delDept(id) {
+    if (confirm('Xóa?')) $.ajax({ url: `/api/departments/delete/${id}`, type: 'DELETE', success: () => deptTable.ajax.reload() });
+}
+function delDept(row) {
+    Swal.fire({
+        title: 'Xác nhận xóa bộ phận?',
+        html: `Bạn muốn xóa bộ phận: <b>${row.DeptName}</b>?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Đồng ý xóa',
+        cancelButtonText: 'Hủy'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `/api/departments/delete/${row.DeptID}`,
+                type: 'DELETE',
+                success: function (response) {
+                    deptTable.ajax.reload();
+                    loadDeptsToDropdown();
+                    Swal.fire('Đã xóa!', response.message, 'success');
+                },
+                error: function (xhr) {
+                    // Lấy tin nhắn lỗi từ server (Ví dụ: "Không thể xóa! Đang có 5 nhân viên...")
+                    const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Lỗi hệ thống!';
+                    Swal.fire({
+                        title: 'Cảnh báo!',
+                        text: errorMsg,
+                        icon: 'error',
+                        confirmButtonColor: '#3085d6'
+                    });
+                }
+            });
+        }
+    });
+}
+// --- HÀM XỬ LÝ SỬA (EDIT) ---
+
+function editEmp(row) {
+    $('#empId').val(row.ID); // Gán ID vào hidden input
+    $('#empName').val(row.FullName);
+    // Cập nhật Select2
+    $('#empDeptSelect').val(row.IdDepartment).trigger('change');
+    $('#empModal').modal('show');
+}
+
+function editDept(row) {
+    $('#deptId').val(row.DeptID); // Gán ID vào hidden input
+    $('#deptName').val(row.DeptName);
+    $('#deptModal').modal('show');
+}
+
+// --- CẬP NHẬT HÀM SAVE (Để gửi cả ID khi sửa) ---
+
+function saveEmp() {
+    const payload = {
+        ID: $('#empId').val(), // Nếu có ID là sửa, không có là thêm mới
+        FullName: $('#empName').val(),
+        IdDepartment: $('#empDeptSelect').val()
+    };
+    $.ajax({
+        url: '/api/employees/save',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        success: function () {
+            $('#empModal').modal('hide');
+            empTable.ajax.reload();
+            Swal.fire('Thành công!', 'Dữ liệu đã được cập nhật', 'success');
+        }
+    });
+}
+📂 app.py
+python
+from flask import Flask,render_template
+from views.employee_view import employee_bp
+from views.department_view import department_bp 
+from waitress import serve
+import os
+
+
+app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
+app.secret_key = "hr_pro_key"
+
+# --- THÊM ĐOẠN NÀY ---
+@app.route('/')
+def index():
+    return render_template('index.html')
+# ---------------------
+app.register_blueprint(employee_bp)
+app.register_blueprint(department_bp)
+
+app.config['DEBUG'] = True
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 6066))
+    print(f"SMILE HR MVC2 Service is running on port {port}...")
+    serve(app, host='127.0.0.1', port=port)
+Hãy thận trọng khi sử dụng mã.
+
+3. Hướng dẫn chạy
+Cài thư viện: pip install flask pyodbc
+Khởi tạo Database:
+sql
+CREATE TABLE [dbo].[Employees]
+(
+[ID] [int] NOT NULL IDENTITY(1, 1),
+[FullName] [nvarchar] (100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+[Department] [nvarchar] (50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+[IdDepartment] [int] NULL
+)
+CREATE TABLE [dbo].[Departments]
+(
+[DeptID] [int] NOT NULL IDENTITY(1, 1),
+[DeptName] [nvarchar] (100) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL
+)
+Hãy thận trọng khi sử dụng mã.
+
+Chạy ứng dụng: Mở CMD trong thư mục dự án và gõ python app.py
+-----------------------------------------------------
+nssm install SMILE_HR_MVC
+Nếu chạy, hãy vào nssm edit SMILE_HR_Python, sửa:
+Path: C:\SMILE PMS\HR_PROJECT_MVC\run_app.bat
+Startup directory: C:\SMILE PMS\HR_PROJECT_MVC
+Arguments: (Để trống)
+
+Sang tab I/O.
+Tại ô Output (stdout) và Error (stderr), hãy chọn đường dẫn: C:\SMILE PMS\HR_PROJECT_MVC\log_nssm.txt
+

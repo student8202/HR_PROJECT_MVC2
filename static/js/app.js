@@ -1,0 +1,114 @@
+let empTable, deptTable;
+
+$(document).ready(function () {
+    // 1. Quản lý Tab (Ghi nhớ tab cũ)
+    const lastTab = localStorage.getItem('activeTab');
+    if (lastTab) {
+        const tabTriggerEl = document.querySelector(`#${lastTab}`);
+        if (tabTriggerEl) {
+            const tab = new bootstrap.Tab(tabTriggerEl);
+            tab.show();
+        }
+    }
+
+    $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+        localStorage.setItem('activeTab', e.target.id);
+    });
+    // Cập nhật giá trị hiển thị cho dropdown đúng với ngôn ngữ đang dùng
+    $('#langSwitcher').val(currentLang); 
+
+    // Logic load ngôn ngữ cũ của bạn
+    loadLanguage(currentLang);
+
+    // Sự kiện thay đổi ngôn ngữ
+    $('#langSwitcher').change(function() {
+        const selected = $(this).val();
+        localStorage.setItem('appLang', selected);
+        loadLanguage(selected);
+    });
+    // 2. Khởi tạo dữ liệu ban đầu
+    // Lưu ý: Việc khởi tạo Table nên để hàm loadLanguage (trong languages.js) quyết định 
+    // để tránh việc bảng hiện ra tiếng Việt rồi mới đổi sang tiếng Anh.
+    loadDeptsToDropdown();
+});
+
+// Hàm khởi tạo bảng Nhân viên (Dùng chung cho cả lần đầu và reload ngôn ngữ)
+function initEmpTable(langUrl) {
+    if ($.fn.DataTable.isDataTable('#empTable')) {
+        $('#empTable').DataTable().destroy();
+    }
+
+    empTable = $('#empTable').DataTable({
+        dom: 'Bfrtip',
+        buttons: ['copy', 'excel', 'pdf', 'print'],
+        ajax: { url: '/api/employees', dataSrc: '' },
+        language: { url: langUrl },
+        columns: [
+            { data: 'ID' },
+            { data: 'FullName' },
+            { data: 'DeptName' },
+            {
+                data: null,
+                render: row => `
+                    <button class="btn btn-sm btn-warning" onclick='editEmp(${JSON.stringify(row)})'>${t('btn_edit') || 'Sửa'}</button>
+                    <button class="btn btn-sm btn-danger" onclick='delEmp(${JSON.stringify(row)})'>${t('btn_delete') || 'Xóa'}</button>`
+            }
+        ]
+    });
+}
+
+// Hàm khởi tạo bảng Bộ phận
+function initDeptTable(langUrl) {
+    if ($.fn.DataTable.isDataTable('#deptTable')) {
+        $('#deptTable').DataTable().destroy();
+    }
+
+    deptTable = $('#deptTable').DataTable({
+        dom: 'Bfrtip',
+        buttons: ['copy', 'excel', 'pdf', 'print'],
+        ajax: { url: '/api/departments', dataSrc: '' },
+        language: { url: langUrl },
+        columns: [
+            { data: 'DeptID' },
+            { data: 'DeptName' },
+            {
+                data: null,
+                render: row => `
+                    <button class="btn btn-sm btn-warning" onclick='editDept(${JSON.stringify(row)})'>${t('btn_edit') || 'Sửa'}</button>
+                    <button class="btn btn-sm btn-danger" onclick='delDept(${JSON.stringify(row)})'>${t('btn_delete') || 'Xóa'}</button>`
+            }
+        ]
+    });
+}
+
+// Hàm này sẽ được gọi từ languages.js sau khi tải xong JSON
+function reloadDataTableLanguage() {
+    const langUrl = currentLang === 'vi'
+        ? "//cdn.datatables.net/plug-ins/1.13.4/i18n/vi.json"
+        : "//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json";
+
+    initEmpTable(langUrl);
+    initDeptTable(langUrl);
+}
+
+// Load dropdown bộ phận với Select2 search
+function loadDeptsToDropdown() {
+    $.ajax({
+        url: '/api/departments',
+        type: 'GET',
+        success: function (data) {
+            let html = `<option value="">${t('placeholder_dept') || '-- Chọn bộ phận --'}</option>`;
+            data.forEach(d => {
+                html += `<option value="${d.DeptID}">${d.DeptName}</option>`;
+            });
+
+            $('#empDeptSelect').html(html).select2({
+                theme: 'bootstrap-5',
+                placeholder: t('placeholder_dept'),
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#empModal')
+            });
+        }
+    });
+}
