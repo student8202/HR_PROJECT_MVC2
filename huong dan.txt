@@ -1,0 +1,194 @@
+Truy cập trang chủ Python.org cho Windows và chọn nút vàng Download Python 3.x.x
+Latest Python install manager - Python install manager 25.2 (Path window python: Environment Variables)
+
+py --version
+
+py -m pip install tên_thư_viện
+
+Bước 2: tạo thư mục Project, cài dat moi trường framework flash  Terminal
+python -m pip install flask pyodbc
+py -m pip install flask pyodbc
+Bước 3: Tạo file app.py
+from flask import Flask, render_template_string
+import pyodbc
+
+app = Flask(__name__)
+
+def get_db_connection():
+    # Thay đổi Server Name cho đúng với máy của bạn
+    conn_str = (
+        'DRIVER={ODBC Driver 17 for SQL Server};'
+        'SERVER=localhost;'
+        'DATABASE=HR_DB;'
+        'Trusted_Connection=yes;'
+    )
+    return pyodbc.connect(conn_str)
+
+@app.route('/')
+def index():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT FullName, Position FROM Employees")
+    rows = cursor.fetchall()
+    
+    html = """
+    <h1>Danh sách nhân viên</h1>
+    <ul>
+        {% for row in rows %}
+        <li>{{ row.FullName }} - {{ row.Position }}</li>
+        {% endfor %}
+    </ul>
+    """
+    return render_template_string(html, rows=rows)
+
+if __name__ == '__main__':
+    app.run()
+----------------------------------------------------------
+Bước 4: Cách chạy thử (Trước khi đưa lên IIS)
+python app.py
+py app.py
+
+-----------------------------
+PowerShell cmd run as administrator
+"C:\Program Files\Python312\python.exe" -m pip install wfastcgi
+"C:\Program Files\Python312\Scripts\wfastcgi-enable.exe"
+--------------------
+"C:\Program Files\Python312\python.exe" -m pip install flask waitress
+-- run app trong cmd
+"C:\Program Files\Python312\python.exe" "C:\SMILE PMS\HR_PROJECT\app.py"
+------------------------------------------------ web server
+Tải Nginx cho Windows: Truy cập nginx.org, tải bản nginx/Windows-1.x.x và giải nén (ví dụ vào C:\nginx).
+Cấu hình cực đơn giản: Mở file C:\nginx\conf\nginx.conf, xóa hết nội dung và dán đoạn mã này vào:
+events {}
+http {
+    server {
+        listen       80; # Chạy trên cổng 80 thay cho IIS
+        server_name  192.168.1.131;
+
+        location / {
+            proxy_pass http://127.0.0.1:6066; # Đẩy thẳng sang Python
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+}
+cd C:\nginx
+start nginx
+nginx -t
+nginx.exe
+
+nginx -s quit
+taskkill /f /im nginx.exe
+nginx -s reload
+2. Xóa file PID cũ (Nếu có) 
+Đôi khi file ghi nhớ trạng thái của Nginx bị lỗi. Bạn vào thư mục cài đặt Nginx: 
+Tìm thư mục C:\nginx\logs\
+Nếu thấy file tên là nginx.pid, hãy Xóa nó đi. 
+---------------------------------------
+NSSM (Non-Sucking Service Manager)
+Bước 1: Tải và cài đặt NSSM
+Tải bản ổn định tại NSSM.cc.
+Giải nén, vào thư mục win64.
+Copy file nssm.exe vào thư mục dự án của bạn: C:\SMILE PMS\HR_PROJECT.
+Bước 2: Tạo Service cho Python (Flask)
+Tạo file run_app.bat trong thư mục C:\SMILE PMS\HR_PROJECT với nội dung:
+@echo off
+cd /d "C:\SMILE PMS\HR_PROJECT"
+"C:\Program Files\Python312\python.exe" -m pip install flask waitress --user
+"C:\Program Files\Python312\python.exe" -m pip install pyodbc --user
+"C:\Program Files\Python312\python.exe" app_.py
+pause
+nssm install SMILE_HR_MVC
+Nếu chạy, hãy vào nssm edit SMILE_HR_Python, sửa:
+Path: C:\SMILE PMS\HR_PROJECT\run_app.bat
+Startup directory: C:\SMILE PMS\HR_PROJECT
+Arguments: (Để trống)
+
+nssm install SMILE_NGINX
+Gõ lệnh: nssm install SMILE_NGINX
+Điền thông tin:
+Path: C:\nginx\nginx.exe
+Startup directory: C:\nginx
+Nhấn Install service.
+-- remove service
+nssm remove SMILE_HR_Python
+nssm edit SMILE_HR_Python
+-- window
+sc delete <Tên_Dịch_Vụ>
+--------------------------
+Đừng đoán lỗi nữa, hãy để NSSM nói cho bạn biết tại sao nó tắt:
+Mở CMD (Admin): nssm edit SMILE_HR_Python
+Sang tab I/O.
+Tại ô Output (stdout) và Error (stderr), hãy chọn đường dẫn: C:\SMILE PMS\HR_PROJECT\log_nssm.txt
+Nhấn Edit service.
+Thử Start lại service trong services.msc.
+Mở file log_nssm.txt vừa tạo ra. Nếu thấy lỗi ImportError: No module named 'flask', nghĩa là Service không nhận được thư viện bạn đã cài.
+-----------------------------------
+*** Tổng hợp: cài môi trường python, web service nginx, chạy service
+
+HR_PROJECT/
+├── app_.py          # File chạy chính (Server/Waitress)
+├── database.py      # Chứa kết nối SQL Server
+├── routes/          # Thư mục chứa các chức năng
+│   └── employees.py # Các API liên quan đến nhân viên/SP
+└── web.config       # Cấu hình IIS (nếu còn dùng)
+----------------------------------
+MVC
+HR_PROJECT/
+├── app.py              # File khởi chạy chính
+├── database.py         # Kết nối SQL Server
+├── controllers/        # Chứa Logic (Gọi SP, xử lý dữ liệu)
+│   └── employee_ctl.py
+├── views/              # Chứa các Blueprint (Định nghĩa Route)
+│   └── employee_view.py
+└── templates/          # Chứa file HTML (Nếu có)
+-------------------------------
+MVC
+HR_PROJECT/
+├── app.py              # Cấu hình Flask & Register Blueprints
+├── database.py         # Kết nối SQL Server
+├── controllers/
+│   └── employee_ctl.py # Xử lý Logic & Gọi SQL
+│   └── department_ctl.py # Xử lý Logic & Gọi SQL
+├── views/
+│   └── employee_view.py# Định nghĩa Routes (API & Giao diện)
+│   └── department_view.py# Định nghĩa Routes (API & Giao diện)
+└── templates/
+    └── index.html      # Giao diện duy nhất (Bootstrap + JS)
+    └── employee.html
+    └── department.html
+├── static/
+│   └── js/
+│       └── languages.js
+│       └── app.js
+│       └── employee.js
+│       └── department.js
+│   └── lang/
+│       └── vi.json
+│       └── en.json 
+-------------------------------
+chạy khó trên iis
+https://nagasudhir.blogspot.com/2022/10/iis-as-reverse-proxy-for-python-flask.html
+
+Bước 5: đưa lên IIS
+1. Cài đặt: Tải và cài đặt HttpPlatformHandler v1.2 từ Microsoft.
+2. Tạo file web.config: Đặt file này cùng thư mục với app.py:
+xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="PythonHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified" />
+    </handlers>
+    <httpPlatform processPath="python.exe"
+                  arguments="app.py"
+                  stdoutLogEnabled="true"
+                  stdoutLogFile=".\logs\python.log">
+      <environmentVariables>
+        <environmentVariable name="PORT" value="%HTTP_PLATFORM_PORT%" />
+      </environmentVariables>
+    </httpPlatform>
+  </system.webServer>
+</configuration>
+
+
