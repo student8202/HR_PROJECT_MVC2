@@ -27,6 +27,10 @@ $(document).ready(function () {
             const tab = new bootstrap.Tab(tabTriggerEl);
             tab.show();
         }
+        // QUAN TRỌNG: Nếu tab cũ là Phân quyền, phải gọi khởi tạo bảng ngay
+        if (lastTab === 'perm-tab-btn') {
+            PermissionModule.init();
+        }
     }
 
     $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
@@ -55,13 +59,15 @@ $(document).ready(function () {
     // mở tab phân quyền
     $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
         const targetId = e.target.id;
+        console.log("Đã bấm vào tab:", targetId); // KIỂM TRA DÒNG NÀY TRONG CONSOLE (F12)
         localStorage.setItem('activeTab', targetId);
 
         // Nếu nhấn vào tab Phân quyền thì khởi tạo bảng Perm
         if (targetId === 'perm-tab-btn') {
-            PermissionModule.initTable();
+            PermissionModule.init();
         }
     });
+
 });
 
 // Hàm khởi tạo bảng Nhân viên (Dùng chung cho cả lần đầu và reload ngôn ngữ)
@@ -123,7 +129,9 @@ function reloadDataTableLanguage() {
     initDeptTable(langUrl);
 
     // Nếu đang ở tab phân quyền thì reload cả bảng đó
-    if ($('#perm-tab-btn').hasClass('active')) {
+    // Kiểm tra tab đang mở từ localStorage thay vì check class
+    const activeTab = localStorage.getItem('activeTab');
+    if (activeTab === 'perm-tab-btn') {
         PermissionModule.initTable();
     }
 }

@@ -1,76 +1,89 @@
 const PermissionModule = {
-    table: null,
-
-    // 1. Khởi tạo bảng danh sách nhân viên để gán quyền
-    initTable: function () {
-        if ($.fn.DataTable.isDataTable('#permTable')) {
-            $('#permTable').DataTable().destroy();
-        }
-
-        this.table = $('#permTable').DataTable({
-            ajax: { url: '/api/employees', dataSrc: '' }, // Lấy danh sách NV
-            columns: [
-                { data: 'FullName' },
-                {
-                    data: 'ID',
-                    render: (id, type, row) => `<div id="rights-badges-${id}" class="small text-muted">Đang tải...</div>`
-                },
-                {
-                    data: 'ID',
-                    render: (id) => `
-                        <button class="btn btn-sm btn-outline-primary" onclick="PermissionModule.openModal(${id})">
-                            <i class="fa-solid fa-user-shield"></i> Phân quyền xem
-                        </button>`
-                }
-            ],
-            // Sau khi vẽ bảng xong, load các Badge quyền xem bộ phận
-            drawCallback: function () {
-                PermissionModule.loadAllBadges();
-            }
-        });
-    },
-
-    // 2. Mở Modal và load dữ liệu hiện tại
-    openModal: async function (empId) {
-        $('#permEmpId').val(empId);
-
-        // Khởi tạo Select2 nếu chưa có
+    init: function () {
+        // Khởi tạo Select2 cho Modal
         $('#viewDeptsSelect').select2({
             theme: 'bootstrap-5',
             dropdownParent: $('#permModal'),
             width: '100%'
         });
+        this.loadTable();
+    },
 
-        // Load danh sách phòng ban hiện tại của NV
-        const res = await fetch(`/api/permissions/view-rights/${empId}`);
-        const selectedIds = await res.json();
+    loadTable: function () {
+        $('#permTable').DataTable({
+            ajax: { url: '/api/permissions/view-list', dataSrc: '' },
+            destroy: true,
+            columns: [
+                { data: 'FullName' },
+                {
+                    data: 'ViewDepts',
+                    render: d => d ? d.split(', ').map(v => `<span class="badge bg-info text-dark me-1">${v}</span>`).join('') : '<small class="text-muted">Chưa có quyền</small>'
+                },
+                {
+                    data: 'ID',
+                    render: id => `<button class="btn btn-sm btn-primary" onclick="PermissionModule.openModal(${id})"><i class="fas fa-edit"></i></button>`
+                }
+            ]
+        });
+    },
+
+    // HÀM CHỌN TẤT CẢ CỰC NHANH
+    selectAll: function () {
+        const allIds = [];
+        $('#viewDeptsSelect option').each(function () {
+            const val = $(this).val();
+            if (val) allIds.push(val); // Lấy hết ID trừ cái option trống đầu tiên
+        });
+        $('#viewDeptsSelect').val(allIds).trigger('change');
+    },
+
+    openModal: async function (empId) {
+        $('#permEmpId').val(empId);
+
+        // Load danh mục bộ phận (Nên load 1 lần duy nhất khi trang mở để NHANH)
+        const resAllDepts = await fetch('/api/departments');
+        const allDepts = await resAllDepts.json();
+
+        let html = '<option></option>';
+        allDepts.forEach(d => {
+            html += `<option value="${d.DeptID}">${d.DeptName}</option>`;
+        });
+        $('#viewDeptsSelect').html(html);
+
+        // Khởi tạo Select2
+        $('#viewDeptsSelect').select2({
+            theme: 'bootstrap-5',
+            dropdownParent: $('#permModal'),
+            width: '100%',
+            placeholder: "-- Chọn bộ phận --",
+            allowClear: true,      // Nút X để xóa sạch (Clear)
+            closeOnSelect: false   // QUAN TRỌNG: Để menu không bị đóng khi click chọn
+        });
+
+        // Load quyền cũ
+        const resUserRights = await fetch(`/api/permissions/view-rights/${empId}`);
+        const selectedIds = await resUserRights.json();
 
         $('#viewDeptsSelect').val(selectedIds).trigger('change');
         $('#permModal').modal('show');
     },
 
-    // 3. Lưu quyền
     save: async function () {
-        const empId = $('#permEmpId').val();
-        const deptIds = $('#viewDeptsSelect').val(); // Mảng các ID
-
-        const res = await fetch('/api/permissions/view-rights', {
+        const payload = {
+            employee_id: $('#permEmpId').val(),
+            dept_ids: $('#viewDeptsSelect').val()
+        };
+        const res = await fetch('/api/permissions/save-view-rights', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ employee_id: empId, dept_ids: deptIds })
+            body: JSON.stringify(payload)
         });
-
-        const result = await res.json();
-        if (result.status === "success") {
+        if (res.ok) {
             Swal.fire(t('save_success'), '', 'success');
             $('#permModal').modal('hide');
-            this.table.ajax.reload(); // Load lại bảng để cập nhật badge
+            this.loadTable();
         }
-    },
-
-    // 4. Load Badge hiển thị các bộ phận NV được xem (Trực quan)
-    loadAllBadges: function () {
-        // Logic gọi API lấy hàng loạt hoặc render từ dữ liệu có sẵn
-        // (Để đơn giản, bạn có thể bổ sung cột ViewDepts vào API /api/employees)
     }
 };
+
+

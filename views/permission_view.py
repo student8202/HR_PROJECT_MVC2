@@ -1,19 +1,18 @@
 from flask import Blueprint, request, jsonify
 from controllers.permission_ctl import PermissionController
 
-perm_bp = Blueprint('permission', __name__)
+perm_bp = Blueprint('perm', __name__)
+
+@perm_bp.route('/api/permissions/view-list', methods=['GET'])
+def get_view_list():
+    return jsonify(PermissionController.get_all_with_view_rights())
 
 @perm_bp.route('/api/permissions/view-rights/<int:emp_id>', methods=['GET'])
-def get_rights(emp_id):
-    rights = PermissionController.get_view_rights(emp_id)
-    return jsonify(rights)
+def get_emp_rights(emp_id):
+    return jsonify(PermissionController.get_view_rights_by_emp(emp_id))
 
-@perm_bp.route('/api/permissions/view-rights', methods=['POST'])
-def update_rights():
+@perm_bp.route('/api/permissions/save-view-rights', methods=['POST'])
+def save_rights():
     data = request.json
-    emp_id = data.get('employee_id')
-    dept_ids = data.get('dept_ids') # Mảng [1, 2, 3]
-    
-    if PermissionController.update_view_rights(emp_id, dept_ids):
-        return jsonify({"status": "success", "message": "Cập nhật quyền thành công"})
-    return jsonify({"status": "error"}), 500
+    PermissionController.save_view_rights(data['employee_id'], data['dept_ids'])
+    return jsonify({"status": "success"})

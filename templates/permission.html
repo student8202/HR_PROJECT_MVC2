@@ -26,6 +26,11 @@
                 <input type="hidden" id="permEmpId">
                 <div class="mb-3">
                     <label class="form-label fw-bold" data-i18n="lbl_viewable_depts">Chọn các bộ phận:</label>
+                    <!-- Nút chọn nhanh -->
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none"
+                        onclick="PermissionModule.selectAll()">
+                        <i class="fa-solid fa-check-double"></i> Chọn tất cả
+                    </button>
                     <select id="viewDeptsSelect" class="form-select" multiple="multiple"></select>
                 </div>
             </div>
