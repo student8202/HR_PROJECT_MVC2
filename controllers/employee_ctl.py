@@ -23,17 +23,34 @@ class EmployeeController:
     def save(data):
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            if data.get("ID"):
-                cursor.execute(
-                    "UPDATE Employees SET FullName=?, IdDepartment=? WHERE ID=?",
-                    (data["FullName"], data["IdDepartment"], data["ID"]),
-                )
-            else:
-                cursor.execute(
-                    "INSERT INTO Employees (FullName, IdDepartment) VALUES (?, ?)",
-                    (data["FullName"], data["IdDepartment"]),
-                )
-            conn.commit()
+            try:
+                if data.get("ID"):
+                    # Trường hợp SỬA
+                    cursor.execute(
+                        "UPDATE Employees SET FullName=?, IdDepartment=? WHERE ID=?",
+                        (data["FullName"], data["IdDepartment"], data["ID"]),
+                    )
+                    conn.commit()
+                    return data["ID"]
+                else:
+                    # Trường hợp THÊM MỚI (Dùng SET NOCOUNT ON để tránh lỗi 500)
+                    sql = """
+                        SET NOCOUNT ON;
+                        INSERT INTO Employees (FullName, IdDepartment) VALUES (?, ?);
+                        SELECT CAST(SCOPE_IDENTITY() AS INT);
+                    """
+                    cursor.execute(sql, (data["FullName"], data["IdDepartment"]))
+                    
+                    # Lấy ID vừa tạo
+                    new_id_row = cursor.fetchone()
+                    new_id = new_id_row[0] if new_id_row else None
+                    
+                    conn.commit()
+                    return new_id
+            except Exception as e:
+                conn.rollback() # Hoàn tác nếu lỗi
+                print(f"Database Error: {str(e)}") # Xem lỗi tại terminal
+                raise e # Đẩy lỗi ra để View bắt được
 
     @staticmethod
     def delete(id):

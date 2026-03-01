@@ -35,10 +35,17 @@
                 <button class="nav-link" id="dept-tab-btn" data-bs-toggle="tab" data-bs-target="#dept-tab"
                     data-i18n="tab_dept">Bộ phận</button>
             </li>
+            <!-- THÊM TAB PHÂN QUYỀN (Chỉ Admin mới thấy hoặc dùng data-perm) -->
+            <li class="nav-item">
+                <button class="nav-link" id="perm-tab-btn" data-bs-toggle="tab" data-bs-target="#perm-tab"
+                    data-i18n="tab_perm">Phân quyền</button>
+            </li>
         </ul>
         <div class="tab-content">
             <div id="emp-tab" class="tab-pane fade show active">{% include 'employee.html' %}</div>
             <div id="dept-tab" class="tab-pane fade">{% include 'department.html' %}</div>
+            <!-- NỘI DUNG TAB PHÂN QUYỀN -->
+            <div id="perm-tab" class="tab-pane fade">{% include 'permission.html' %}</div>
         </div>
     </div>
 

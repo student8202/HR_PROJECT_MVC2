@@ -39,5 +39,8 @@
         "login_failed": "Tài khoản hoặc mật khẩu không đúng!",
         "import_success": "Đã nhập thành công {count} nhân viên.",
         "import_error": "Lỗi khi nhập dữ liệu!"
-    }
+    },
+    "tab_perm": "Phân quyền",
+    "lbl_viewable_depts": "Bộ phận quản lý",
+    "placeholder_select_multiple": "-- Chọn nhiều bộ phận --"
 }

@@ -7,9 +7,13 @@ employee_bp = Blueprint('employee', __name__)
 def get_emps(): return jsonify(EmployeeController.get_all())
 
 @employee_bp.route('/api/employees/save', methods=['POST'])
-def save_emp():
-    EmployeeController.save(request.json)
-    return jsonify({"status": "success"})
+def save_employee():
+    try:
+        new_id = EmployeeController.save(request.json)
+        # Bắt buộc trả về JSON có chứa id
+        return jsonify({"status": "success", "id": new_id})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @employee_bp.route('/api/employees/delete/<int:id>', methods=['DELETE'])
 def del_emp(id):

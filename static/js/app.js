@@ -11,12 +11,12 @@ $(document).ready(function () {
     // Hiển thị tên người dùng nếu có (giúp nút đăng xuất thân thiện hơn)
     // Lấy tên từ "kho lưu trữ" localStorage
     const name = localStorage.getItem('userName');
-    
+
     // Nếu có tên thì hiển thị vào thẻ có id="user-display-name"
     if (name) {
         $('#user-display-name').text(name);
     } else {
-        $('#user-display-name').text('Guest'); 
+        $('#user-display-name').text('Guest');
     }
 
     // 1. Quản lý Tab (Ghi nhớ tab cũ)
@@ -33,13 +33,13 @@ $(document).ready(function () {
         localStorage.setItem('activeTab', e.target.id);
     });
     // Cập nhật giá trị hiển thị cho dropdown đúng với ngôn ngữ đang dùng
-    $('#langSwitcher').val(currentLang); 
+    $('#langSwitcher').val(currentLang);
 
     // Logic load ngôn ngữ cũ của bạn
     loadLanguage(currentLang);
 
     // Sự kiện thay đổi ngôn ngữ
-    $('#langSwitcher').change(function() {
+    $('#langSwitcher').change(function () {
         const selected = $(this).val();
         localStorage.setItem('appLang', selected);
         loadLanguage(selected);
@@ -51,6 +51,17 @@ $(document).ready(function () {
 
     // 3. Áp dụng quyền để ẩn/hiện nút ngay khi load trang
     applyPermissions();
+
+    // mở tab phân quyền
+    $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+        const targetId = e.target.id;
+        localStorage.setItem('activeTab', targetId);
+
+        // Nếu nhấn vào tab Phân quyền thì khởi tạo bảng Perm
+        if (targetId === 'perm-tab-btn') {
+            PermissionModule.initTable();
+        }
+    });
 });
 
 // Hàm khởi tạo bảng Nhân viên (Dùng chung cho cả lần đầu và reload ngôn ngữ)
@@ -110,6 +121,11 @@ function reloadDataTableLanguage() {
 
     initEmpTable(langUrl);
     initDeptTable(langUrl);
+
+    // Nếu đang ở tab phân quyền thì reload cả bảng đó
+    if ($('#perm-tab-btn').hasClass('active')) {
+        PermissionModule.initTable();
+    }
 }
 
 // Load dropdown bộ phận với Select2 search
@@ -135,7 +151,7 @@ function loadDeptsToDropdown() {
 }
 
 function applyPermissions() {
-    $('[data-perm]').each(function() {
+    $('[data-perm]').each(function () {
         const requiredPerm = $(this).attr('data-perm');
         if (!Auth.has(requiredPerm)) {
             $(this).remove(); // Xóa hẳn nút khỏi giao diện nếu không có quyền

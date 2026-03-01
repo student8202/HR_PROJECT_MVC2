@@ -39,5 +39,8 @@
         "login_failed": "Invalid username or password!",
         "import_success": "Successfully imported {count} employees.",
         "import_error": "Import failed!"
-    }
+    },
+    "tab_perm": "Phân quyền",
+    "lbl_viewable_depts": "Bộ phận quản lý",
+    "placeholder_select_multiple": "-- Chọn nhiều bộ phận --"
 }

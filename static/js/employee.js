@@ -30,7 +30,15 @@ function delEmp(row) {
                 url: `/api/employees/delete/${row.ID}`,
                 type: 'DELETE',
                 success: function () {
-                    empTable.ajax.reload();
+                    // Reload và giữ nguyên paging (false)
+                    empTable.ajax.reload(function (json) {
+                        const info = empTable.page.info();
+                        // Nếu trang hiện tại không còn dòng nào (do vừa xóa dòng cuối của trang)
+                        // và chúng ta không ở trang đầu tiên (info.page > 0)
+                        if (info.recordsDisplay > 0 && info.start >= info.recordsDisplay && info.page > 0) {
+                            empTable.page('previous').draw('page');
+                        }
+                    }, false);
                     Swal.fire('Đã xóa!', `Nhân viên <b>${row.FullName}</b> đã bị xóa.`, 'success');
                 },
                 error: () => Swal.fire('Lỗi', 'Không thể xóa dữ liệu', 'error')
@@ -51,20 +59,73 @@ function editEmp(row) {
 // --- CẬP NHẬT HÀM SAVE (Để gửi cả ID khi sửa) ---
 
 function saveEmp() {
+    // 1. Lấy dữ liệu từ Form
+    const empId = $('#empId').val();
     const payload = {
-        ID: $('#empId').val(), // Nếu có ID là sửa, không có là thêm mới
-        FullName: $('#empName').val(),
+        ID: empId,
+        FullName: $('#empName').val().trim(),
         IdDepartment: $('#empDeptSelect').val()
     };
+
+    // 2. Kiểm tra dữ liệu (Validate)
+    if (!payload.FullName) {
+        Swal.fire(t('msg_err') || 'Lỗi!', t('err_name_empty') || 'Vui lòng nhập họ tên', 'error');
+        return;
+    }
+    if (!payload.IdDepartment) {
+        Swal.fire(t('msg_err') || 'Lỗi!', t('err_dept_empty') || 'Vui lòng chọn bộ phận', 'error');
+        return;
+    }
+
     $.ajax({
         url: '/api/employees/save',
         type: 'POST',
         contentType: 'application/json',
         data: JSON.stringify(payload),
-        success: function () {
+        success: function (response) {
+            // Ưu tiên lấy ID từ response (thêm mới), nếu không có thì lấy từ biến empId (sửa)
+            const targetId = response.id || $('#empId').val();
+
             $('#empModal').modal('hide');
-            empTable.ajax.reload();
-            Swal.fire('Thành công!', 'Dữ liệu đã được cập nhật', 'success');
+
+            // Reload bảng và thực hiện callback
+            empTable.ajax.reload(function () {
+                if (targetId) {
+                    // 1. Tìm index của dòng dựa trên ID trong toàn bộ dữ liệu
+                    let foundIndex = -1;
+                    empTable.rows().every(function (idx) {
+                        if (Number(this.data().ID) === Number(targetId)) {
+                            foundIndex = idx;
+                            return false; // Dừng vòng lặp khi tìm thấy
+                        }
+                    });
+
+                    // 2. Nếu tìm thấy dòng (index >= 0)
+                    if (foundIndex !== -1) {
+                        const pageInfo = empTable.page.info();
+
+                        // 3. Tính toán trang và nhảy đến trang đó
+                        const pageToJump = Math.floor(foundIndex / pageInfo.length);
+                        empTable.page(pageToJump).draw(false);
+
+                        // 4. Đợi DOM render rồi mới Scroll và Highlight
+                        setTimeout(() => {
+                            const rowNode = empTable.row(foundIndex).node();
+                            if (rowNode) {
+                                rowNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                                $(rowNode).addClass('table-success');
+                                setTimeout(() => $(rowNode).removeClass('table-success'), 2000);
+                            }
+                        }, 300);
+                    }
+                }
+            }, false); // Quan trọng: false để không reset về trang 1 ngay lập tức
+
+            Swal.fire(t('msg_success') || 'Thành công!', t('save_success') || 'Dữ liệu đã được cập nhật', 'success');
+        },
+        error: function (err) {
+            Swal.fire('Error', err.responseJSON?.message || 'Lỗi kết nối server', 'error');
         }
     });
 }
@@ -82,10 +143,10 @@ function exportEmpExcel() {
         allowOutsideClick: false,
         didOpen: () => { Swal.showLoading(); }
     });
-    
+
     // Tải file về
     window.location.href = '/api/employees/export';
-    
+
     // Đóng loading sau 1 giây
     setTimeout(() => { Swal.close(); }, 1500);
 }
