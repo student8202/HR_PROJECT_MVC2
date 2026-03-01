@@ -21,13 +21,23 @@
     "placeholder_dept": "-- Select Department --",
     "col_action": "Operation",
     "err_dept_exists": "This department name already exists!",
+    "labels": {
+        "login_title": "System Login",
+        "username": "Username",
+        "password": "Password",
+        "no_permission": "No Permission",
+        "view_only": "View Only"
+    },
     "buttons": {
+        "login": "Login",
+        "logout": "Logout",
         "download_template": "Download Template",
         "export_excel": "Export Excel",
         "import_excel": "Import Data"
     },
     "messages": {
+        "login_failed": "Invalid username or password!",
         "import_success": "Successfully imported {count} employees.",
-        "import_error": "Error importing data!"
+        "import_error": "Import failed!"
     }
 }

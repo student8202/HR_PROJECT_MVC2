@@ -1,0 +1,119 @@
+MVC
+HR_PROJECT/
+├── app.py              # Cấu hình Flask & Register Blueprints
+├── database.py         # Kết nối SQL Server
+├── controllers/
+│   └── employee_ctl.py # Xử lý Logic & Gọi SQL
+│   └── department_ctl.py # Xử lý Logic & Gọi SQL
+├── views/
+│   └── employee_view.py# Định nghĩa Routes (API & Giao diện)
+│   └── department_view.py# Định nghĩa Routes (API & Giao diện)
+└── templates/
+    └── index.html      # Giao diện duy nhất (Bootstrap + JS)
+    └── employee.html
+    └── department.html
+├── static/
+│   └── js/
+│       └── languages.js
+│       └── app.js
+│       └── employee.js
+│       └── department.js
+│   └── lang/
+│       └── vi.json
+│       └── en.json 
+-------------------------------------------
+Bước 1: Khởi tạo Git cho folder
+git init
+Bước 2: Thêm file vào hàng chờ (Staging)
+git add .
+Bước 3: Đóng gói thay đổi (Commit)
+git commit -m "Lần đầu tải code lên"
+Bước 5: Đẩy code lên GitHub (Push) -- git status
+git push -u origin main
+Các lệnh kiểm tra hữu ích:
+git status: Xem những file nào đã được add, file nào chưa.
+git remote -v: Kiểm tra xem máy bạn đã kết nối đúng với link GitHub chưa.
+-------------------------------------------
+CREATE TABLE [dbo].[Employees]
+(
+[ID] [int] NOT NULL IDENTITY(1, 1),
+[FullName] [nvarchar] (100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+[Department] [nvarchar] (50) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+[IdDepartment] [int] NULL
+)
+CREATE TABLE [dbo].[Departments]
+(
+[DeptID] [int] NOT NULL IDENTITY(1, 1),
+[DeptName] [nvarchar] (100) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL
+)
+
+-- Thêm cột Password và Permissions vào bảng Employees
+ALTER TABLE [dbo].[Employees] ADD [Password] NVARCHAR(100) NULL;
+ALTER TABLE [dbo].[Employees] ADD [Permissions] NVARCHAR(MAX) NULL;
+
+-- 1. Bảng Nhóm Quyền (Chỉ dùng để hiển thị Label trên UI)
+CREATE TABLE [dbo].[PermissionGroup] (
+    [GroupID] [int] PRIMARY KEY, -- Nhập thủ công 1, 2, 3...
+    [GroupName] [nvarchar](100) NOT NULL,
+    [SortOrder] [int] DEFAULT 0
+);
+
+-- 2. Bảng Danh mục Quyền (Liên kết qua ID nhóm, không khóa ngoại)
+CREATE TABLE [dbo].[PermissionList] (
+    [PermCode] [nvarchar](50) PRIMARY KEY, -- 'view_emp', 'edit_shift'...
+    [PermName] [nvarchar](100) NOT NULL,
+    [IdGroup] [int] NOT NULL               -- Chỉ lưu ID, không tạo Constraint
+);
+
+-- 3. Bảng Nhân viên (Lưu kết quả cuối cùng)
+CREATE TABLE [dbo].[Employees] (
+    [ID] [int] IDENTITY(1,1) PRIMARY KEY,
+    [FullName] [nvarchar](100) NOT NULL,
+    [Password] [nvarchar](100) NULL,
+    [Permissions] [nvarchar](max) NULL,    -- Lưu: 'view_emp,assign_shift'
+    [IdDepartment] [int] NULL
+);
+
+-- 1. Tạo bảng lưu Quyền của từng Nhân viên (Nhiều - Nhiều)
+CREATE TABLE [dbo].[EmployeePermissions] (
+    [EmployeeID] [int] NOT NULL,
+    [PermCode] [nvarchar](50) NOT NULL,
+    PRIMARY KEY ([EmployeeID], [PermCode])
+);
+
+-- 2. Tạo bảng lưu Quyền xem Bộ phận (Nhiều - Nhiều)
+CREATE TABLE [dbo].[EmployeeViewRights] (
+    [EmployeeID] [int] NOT NULL,
+    [DeptID] [int] NOT NULL,
+    PRIMARY KEY ([EmployeeID], [DeptID])
+);
+
+-- 3. Chuyển dữ liệu từ cột Permissions cũ sang bảng mới (Chạy 1 lần)
+-- Nó sẽ tách chuỗi 'view_emp,edit_emp' và chèn vào bảng EmployeePermissions
+/*
+Bạn biến chuỗi phân cách bởi dấu phẩy thành cấu trúc XML, sau đó dùng nodes() để tách chúng thành các dòng
+*/
+INSERT INTO [dbo].[EmployeePermissions] (EmployeeID, PermCode)
+SELECT 
+    e.ID,
+    T.c.value('.', 'NVARCHAR(MAX)') AS value
+FROM Employees e
+CROSS APPLY (
+    SELECT CAST('<x>' + REPLACE(e.Permissions, ',', '</x><x>') + '</x>' AS XML) AS xDoc
+) AS A
+CROSS APPLY xDoc.nodes('/x') AS T(c);
+
+-- Nạp nhóm
+INSERT INTO [dbo].[PermissionGroup] ([GroupID], [GroupName]) VALUES (1, N'Nhân Viên'), (2, N'Phân Ca');
+
+-- Nạp quyền (Gán IdGroup = 1 cho Nhân viên, 2 cho Phân ca)
+INSERT INTO [dbo].[PermissionList] VALUES 
+('view_emp', N'Xem nhân viên', 1),
+('edit_emp', N'Sửa nhân viên', 1),
+('assign_shift', N'Phân ca', 2),
+('edit_shift', N'Sửa ca đã xóa', 2);
+
+INSERT INTO Employees ([FullName], [Department], [IdDepartment], [Password], [Permissions])
+VALUES
+(N'Admin', N'Kỹ Thuật', 2, '123', NULL )
+UPDATE Employees SET Password = '123', Permissions = 'view_emp,edit_emp,del_emp' WHERE FullName = 'Admin'

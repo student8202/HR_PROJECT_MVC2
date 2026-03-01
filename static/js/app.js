@@ -1,6 +1,24 @@
 let empTable, deptTable;
 
 $(document).ready(function () {
+    // 0. Kiểm tra đăng nhập (Bảo mật Frontend)
+    const userPerms = localStorage.getItem('userPerms');
+    if (!userPerms && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+        return;
+    }
+
+    // Hiển thị tên người dùng nếu có (giúp nút đăng xuất thân thiện hơn)
+    // Lấy tên từ "kho lưu trữ" localStorage
+    const name = localStorage.getItem('userName');
+    
+    // Nếu có tên thì hiển thị vào thẻ có id="user-display-name"
+    if (name) {
+        $('#user-display-name').text(name);
+    } else {
+        $('#user-display-name').text('Guest'); 
+    }
+
     // 1. Quản lý Tab (Ghi nhớ tab cũ)
     const lastTab = localStorage.getItem('activeTab');
     if (lastTab) {
@@ -30,6 +48,9 @@ $(document).ready(function () {
     // Lưu ý: Việc khởi tạo Table nên để hàm loadLanguage (trong languages.js) quyết định 
     // để tránh việc bảng hiện ra tiếng Việt rồi mới đổi sang tiếng Anh.
     loadDeptsToDropdown();
+
+    // 3. Áp dụng quyền để ẩn/hiện nút ngay khi load trang
+    applyPermissions();
 });
 
 // Hàm khởi tạo bảng Nhân viên (Dùng chung cho cả lần đầu và reload ngôn ngữ)
@@ -109,6 +130,17 @@ function loadDeptsToDropdown() {
                 width: '100%',
                 dropdownParent: $('#empModal')
             });
+        }
+    });
+}
+
+function applyPermissions() {
+    $('[data-perm]').each(function() {
+        const requiredPerm = $(this).attr('data-perm');
+        if (!Auth.has(requiredPerm)) {
+            $(this).remove(); // Xóa hẳn nút khỏi giao diện nếu không có quyền
+        } else {
+            $(this).show(); // Hiện nút nếu có quyền
         }
     });
 }

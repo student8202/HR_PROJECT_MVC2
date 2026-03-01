@@ -21,12 +21,22 @@
     "placeholder_dept": "-- Chọn bộ phận --",
     "col_action": "Thao tác",
     "err_dept_exists": "Tên bộ phận này đã tồn tại trong hệ thống!",
+    "labels": {
+        "login_title": "Đăng nhập hệ thống",
+        "username": "Tên đăng nhập",
+        "password": "Mật khẩu",
+        "no_permission": "Không có quyền",
+        "view_only": "Chỉ xem"
+    },
     "buttons": {
+        "login": "Đăng nhập",
+        "logout": "Đăng xuất",
         "download_template": "Tải file mẫu",
         "export_excel": "Xuất Excel",
         "import_excel": "Nhập dữ liệu"
     },
     "messages": {
+        "login_failed": "Tài khoản hoặc mật khẩu không đúng!",
         "import_success": "Đã nhập thành công {count} nhân viên.",
         "import_error": "Lỗi khi nhập dữ liệu!"
     }
