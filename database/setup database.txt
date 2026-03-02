@@ -5,19 +5,29 @@ HR_PROJECT/
 ├── controllers/
 │   └── employee_ctl.py # Xử lý Logic & Gọi SQL
 │   └── department_ctl.py # Xử lý Logic & Gọi SQL
+│   └── auth_ctl.py # Xử lý Logic & Gọi SQL
+│   └── permission_ctl.py # Xử lý Permission
 ├── views/
 │   └── employee_view.py# Định nghĩa Routes (API & Giao diện)
 │   └── department_view.py# Định nghĩa Routes (API & Giao diện)
+│   └── permission_view.py# Định nghĩa Routes (API & Giao diện)
 └── templates/
-    └── index.html      # Giao diện duy nhất (Bootstrap + JS)
-    └── employee.html
-    └── department.html
+│   └── index.html      # Giao diện duy nhất (Bootstrap + JS)
+│   └── header.html
+│   └── footer.html
+│   └── employee.html
+│   └── department.html
+│   └── login.html
+│   └── permission.html
 ├── static/
 │   └── js/
 │       └── languages.js
 │       └── app.js
 │       └── employee.js
 │       └── department.js
+│       └── auth_handler.js
+│       └── permission.js
+│       └── ui_helper.js
 │   └── lang/
 │       └── vi.json
 │       └── en.json 
@@ -70,7 +80,7 @@ CREATE TABLE [dbo].[Employees] (
     [ID] [int] IDENTITY(1,1) PRIMARY KEY,
     [FullName] [nvarchar](100) NOT NULL,
     [Password] [nvarchar](100) NULL,
-    [Permissions] [nvarchar](max) NULL,    -- Lưu: 'view_emp,assign_shift'
+    -- [Permissions] [nvarchar](max) NULL,    -- Lưu: 'view_emp,assign_shift'
     [IdDepartment] [int] NULL
 );
 
@@ -117,3 +127,15 @@ INSERT INTO Employees ([FullName], [Department], [IdDepartment], [Password], [Pe
 VALUES
 (N'Admin', N'Kỹ Thuật', 2, '123', NULL )
 UPDATE Employees SET Password = '123', Permissions = 'view_emp,edit_emp,del_emp' WHERE FullName = 'Admin'
+
+-- Nạp nhóm và quyền
+INSERT INTO [dbo].[PermissionGroup] VALUES (1, N'Nhân Viên', 1), (2, N'Phân Ca', 2);
+INSERT INTO [dbo].[PermissionList] VALUES 
+('view_emp', N'Xem nhân viên', 1), ('edit_emp', N'Sửa nhân viên', 1),
+('assign_shift', N'Phân ca', 2), ('edit_shift', N'Sửa ca đã xóa', 2);
+
+-- Gán quyền cho NV có ID = 1 (Được sửa NV và Phân ca)
+INSERT INTO [dbo].[EmployeePermissions] VALUES (1, 'edit_emp'), (1, 'assign_shift');
+
+-- Gán quyền xem Bộ phận cho NV có ID = 1 (Được xem bộ phận 1 và 2)
+INSERT INTO [dbo].[EmployeeViewRights] VALUES (1, 1), (1, 2);
